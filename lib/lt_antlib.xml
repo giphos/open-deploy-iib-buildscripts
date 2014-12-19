@@ -1,0 +1,138 @@
+<?xml version="1.0"?>
+
+<!-- Copyright (c) 2014 Lorenco Trichardt                        -->
+<!-- Released under the GNU GENERAL PUBLIC LICENSE (Version 3)   -->
+<!-- https://github.com/giphos/open-deploy-iib-buildscripts      -->
+
+<!-- ####### lt_antlib.xml ####### 
+
+Description: 	
+-=-=-=-=-=-=-											
+	Ant Script library:
+
+						
+																							 					 																							 					        																													
+Change History: 																			 					
+		Version		Date			Author					Description of change 			 					
+		-=-=-=-		-=-=-=-=-=-		-=-=-=-=-=-=-=-=-		-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+		1.0.0.0		01/12/2014		Lorenco Trichardt		Initial version 				 					
+		1.0.0.1		08/12/2014		Lorenco Trichardt		Bug fixes... 				 					
+# # # # # -->
+
+
+<!--  Start of Code -->
+<project name="Lt.Ant.Utilities">
+
+	<!-- - - - - - - - - - - - - - - - - - 
+          Macro: loginit (internal)        
+         - - - - - - - - - - - - - - - - - -->
+	<macrodef name="loginit">
+		<attribute name="log.level" default="verbose" />
+		<attribute name="log.filename" default="lt_default.log" />
+		<attribute name="log.dir" default="logs" />
+		<attribute name="log.append" default="false" />
+		<sequential>
+			<mkdir dir="@{log.dir}" />
+			<record name="@{log.dir}/@{log.filename}"
+			        loglevel="@{log.level}"
+			        append="@{log.append}"
+			/>
+			<logmsg level="info"
+			        message="Logging activated using log level:'@{log.level}' to @{log.filename} (append=@{log.append})"
+			/>
+		</sequential>
+	</macrodef>
+
+	<!-- - - - - - - - - - - - - - - - - - 
+          Macro: 	loadpropertyfile     
+          			This Macro will check for the property file and read it optionally will fail if not found                   
+         - - - - - - - - - - - - - - - - - -->
+	<macrodef name="loadpropertyfile">
+		<attribute name="propfilename" />
+		<attribute name="required" default="true" />
+		<sequential>
+			<logmsg message="Loading properties from: '@{propfilename}'" />
+			<available file="@{propfilename}" property="filethere" />
+			<logmsg level="debug" message="filethere=${filethere}" />
+			<condition property="passed">
+				<or>
+					<isfalse value="@{required}" />
+					<and>
+						<istrue value="@{required}" />
+						<isset property="filethere" />
+					</and>
+				</or>
+			</condition>
+			<logmsg level="debug"
+			        message="Checking if we are ok with Passedvalue='${passed}'"
+			/>
+			<fail unless="${passed}"
+			      message="A fatal error, REQUIRED property file '@{propfilename}' not found"
+			/>
+			<logmsg level="debug" message="Reading '@{propfilename}'..." />
+			<property file="@{propfilename}" />
+			<logmsg level="debug"
+			        message="Done Reading ='@{propfilename}'..."
+			/>
+		</sequential>
+	</macrodef>
+	
+	<!-- - - - - - - - - - - - - - - - - - 
+	          Macro: 	assertfile     
+	          			This Macro will check for the file and fail if not found                   
+	         - - - - - - - - - - - - - - - - - -->
+		<macrodef name="assertfile">
+			<attribute name="filename" />
+			<sequential>
+				<logmsg level="debug" message="Asserting Filename : @{filename} " />
+				<available file="@{filename}" property="filefound" />
+				<fail unless="${filefound}"
+				      message="FATAL ERROR : Required file '@{filename}' missing"
+				/>
+				<logmsg level="debug" message="Asserted file OK : @{filename}" />
+			</sequential>
+		</macrodef>
+	
+	<!-- - - - - - - - - - - - - - - - - - 
+          Macro: 	assertproperty     
+          			This Macro will check for the property but will fail if not found                   
+         - - - - - - - - - - - - - - - - - -->
+	<macrodef name="assertproperty">
+		<attribute name="property" />
+		<sequential>
+			<logmsg level="debug" message="Asserting Property : @{property} with value ${@{property}}" />
+			<fail unless="@{property}"
+			      message="FATAL ERROR : Required property '@{property}' missing"
+			/>
+			<logmsg level="debug" message="Asserted Property OK : @{property}" />
+			<logmsg message="@{property} found with value '${@{property}}'" />
+		</sequential>
+	</macrodef>
+
+	<!-- - - - - - - - - - - - - - - - - - 
+          Macro: 	logmsg     
+          			This Macro will log a message with time stamp                   
+         - - - - - - - - - - - - - - - - - -->
+	<macrodef name="logmsg">
+		<attribute name="message" />
+		<attribute name="level" default="info" />
+		<!-- Echo the time ... -->
+		<sequential>
+			<tstamp>
+				<format property="logtime" pattern="dd-mm-yy_HH-mm-ss" />
+			</tstamp>
+			<echo level="@{level}" message="@{level},${logtime},@{message}" />
+		</sequential>
+	</macrodef>
+
+	<!-- - - - - - - - - - - - - - - - - - 
+          target: 	lt_utilinit (internal) 
+          			Make sure this is called every time to set up the environment                   
+	   	 - - - - - - - - - - - - - - - - - -->
+	<target name="init" unless="lt.ant.util.init">
+		<property name="lt.ant.util.init" value="true" />
+
+		<logmsg level="info" message="LT ANT utility Initialisation" />
+
+	</target>
+</project>

@@ -1,0 +1,296 @@
+<?xml version="1.0"?>
+<!-- ####### IIBBuildMaster.xml ####### 			
+			
+Description: 	
+-=-=-=-=-=-=-											
+	Ant Script to provide the following targets: 
+		master.run						- RUNME	
+		iib.target.build				- Build the BAR
+		iib.target.deploy
+		iib.target.test
+
+		iib.project.clean		 		- "removes the existing project files from the IIB toolkit workplace." 					
+		
+TODO: 	iib.build.atrefactlist			- Require traverse the Directory to build the atrefacts to add 
+		
+		iib.bar.create		 			- "creates the BAR files using mqsicreatebar" 	
+		iib.bar.apply.override			- "applies overrides to the generated bar file from properties file." 		
+
+This list below is still being refactored...					
+		iib.bar.deploy.remote 			- "deploys the BAR file to the IIB remotely." 										
+		iib.bar.list.deployed			- "reports the deployed resources for verifying the IIB deploy." 					
+		iib.bar.copy.toserver			- "ftps the BAR file to remote Broker server." 											
+																							 					 
+																							 					        																													
+Change History: 																			 					
+		Version		Date			Author					Description of change 			 					
+		-=-=-=-		-=-=-=-=-=-		-=-=-=-=-=-=-=-=-		-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+		1.0.0		01/12/2014		Lorenco Trichardt		Initial version 				 					
+		1.0.1		05/12/2014		Lorenco Trichardt		Cleaned up the script for use with RTC			
+		1.0.2		12/12/2014		Lorenco Trichardt		Bug Fixes.	(No Deployment yet)																			 					
+# # # # # -->
+
+<!-- ================================= Start of Code -->
+<project name="IIB.Build.Automation" default="master.run">
+	<import file="lib/lt_antlib.xml" as="antlib" />
+
+	<!-- Start logging... -->
+	<!-- Valid log levels: "debug"	"verbose"	"info"	"warning"	"error" -->
+	<loginit log.dir="${basedir}/buildlogs"
+	         log.filename="${ant.project.name}.log"
+	         log.level="info"
+	/>
+
+	<!-- ================================= 
+          target: master.run   : Executes the build, override and deploy
+          Called with a parameter of Project name...                   
+         ================================= -->
+	<target name="master.run"
+	        depends="init"
+	        description="Executes the build, override and deploy depending on the properties file."
+	>
+		<property name="iib.build.project" value="AntBuildTestProject1" />
+		<!-- Execution group for Broker... -->
+		<property name="iib.build.target.server" value="default" />
+		<property name="iib.build.id" value="_DefaultBuild" />
+		<property name="iib.build.number" value="" />
+
+		<property name="iib.build.project.directory"
+		          value="${iib.build.base.directory}/${iib.build.project}"
+		/>
+		<property name="iib.build.target.bar.filename"
+		          value="${iib.build.project}${iib.build.id}${iib.build.number}.bar"
+		/>
+ 
+		<property name="iib.build.env.property.file"
+		          value="${iib.build.properties.directory}/${iib.build.project}_IIB_${iib.build.target.environment}.properties"
+		/>
+		<logmsg message="Property file: ${iib.build.env.property.file}"/>
+
+		<antcall target="iib.target.build" />
+		<antcall target="iib.target.deploy" />
+		<antcall target="iib.target.test" />
+
+	</target>
+
+	<!-- ================================= 
+          target: 	init (internal) 
+          			Make sure this is called every time to set up the environment                   
+         ================================= -->
+	<target name="init" unless="master.init">
+		<property name="master.init" value="true" />
+		<antcall target="antlib.init" />
+
+		<!-- Let's load the default property files -->
+		<loadpropertyfile propfilename="${basedir}/${ant.project.name}.properties" />
+
+		<logmsg message="Checking required properties are set" />
+		<!-- Do some sanity checks -->
+		<assertproperty property="master.init" />
+
+		<assertproperty property="iib.toolkit.home" />
+
+		<assertproperty property="iib.build" />
+		<property name="iib.build.${iib.build}" value="" />
+
+
+		<assertproperty property="iib.deploy" />
+		<property name="iib.deploy.${iib.deploy}" value="" />
+
+		<assertproperty property="iib.test" />
+		<property name="iib.test.${iib.deploy}" value="" />
+
+		<assertproperty property="iib.build.target.environment" />
+
+
+		<assertproperty property="iib.build.base.directory" />
+		<assertproperty property="iib.build.envconf.directory" />
+
+		<assertproperty property="iib.build.working.directory" />
+		<mkdir dir="${iib.build.working.directory}" />
+
+		<assertproperty property="iib.build.output.directory" />
+		<mkdir dir="${iib.build.output.directory}" />
+
+		<assertproperty property="iib.build.properties.directory" />
+
+	</target>
+
+	<!-- ================================= 
+          target: loadenvprop         : Load Envornment specific properties             
+         ================================= -->
+	<target name="loadenvprop">
+
+		<!-- Do not run this if not initialised -->
+		<assertproperty property="${iib.build.master.init}" />
+		<loadpropertyfile propfilename="${iib.build.envconf.directory}/${" />
+
+		<assertproperty property="HOST" />
+		<assertproperty property="USER" />
+		<assertproperty property="IIBNODE" />
+		<assertproperty property="REMOTE_PATH" />
+		<assertproperty property="MQSI_HOME" />
+
+	</target>
+
+	<!-- ================================= 
+          target: iib.target.build              
+         ================================= -->
+	<target name="iib.target.build"
+	        description="This is the main module of build is 'true'"
+	        if="iib.build.true"
+	>
+		<assertproperty property="iib.build.project.directory"/>
+		<assertproperty property="master.init" />
+		
+		<logmsg message="IIB workspace is set to ${iib.build.working.directory}." />
+		<antcall target="iib.clean.project" />
+		<antcall target="iib.bar.create" />
+	</target>
+
+	<!-- ================================= 
+          target: iib.target.deploy              
+         ================================= -->
+	<target name="iib.target.deploy"
+	        description="This is the main module of deploy is 'true'"
+	        if="iib.deploy.true"
+	>
+		<logmsg message="IIB workspace is set to ${iib.build.working.directory}." />
+		<antcall target="iib.bar.apply.override" />
+
+		<!-- Next Version :)
+		<antcall target="iib.bar.copy.toserver" />
+		<antcall target="iib.bar.deploy.remote" />
+		<antcall target="iib.bar.list.deployed" />
+-->
+	</target>
+
+	<!-- ================================= 
+          target: iib.target.test              
+         ================================= -->
+	<target name="iib.target.test"
+	        description="This is the main module of test is 'true'"
+	        if="iib.test.true"
+	>
+
+		<logmsg message="IIB workspace is set to ${iib.build.working.directory}." />
+	</target>
+
+
+	<!-- ================================= 
+          target: iib.clean.project              
+         ================================= -->
+	<target name="iib.clean.project"
+	        description="removes the existing project build files from the IIB toolkit workplace."
+	>
+		<assertproperty property="iib.build.project.directory"/>
+	
+		<logmsg message="Removing existing project files from IIB toolkit workspace..."
+		/>
+		<delete dir="${iib.build.working.directory}" />
+		<logmsg message="Completed removing existing project files from IIB toolkit workspace."
+		/>
+	</target>
+
+
+	<!-- ================================= 
+          target: iib.bar.artefactlist             
+         ================================= -->
+	<target name="iib.build.artefactlist" description="build the BAR content.">
+		<assertproperty property="iib.build.project.directory"/>
+		<assertproperty property="iib.build.target.bar.filename"/>
+		<assertproperty property="iib.build.project"/>
+		<property name="iib.build.target.artefactlist"
+				          value="MessageFlow1.flow,MessageFlow2.flow"	/>	
+		<logmsg message="Building the BAR file contents ..." />
+		<logmsg message="TODO !!! Building a list" />
+		
+		<assertproperty property="iib.build.target.artefactlist"/>
+		<logmsg level="debug"
+		        message="Artefacts to build for Bar is ${iib.build.target.artefactlist}"
+		/>
+		<logmsg message="Completed the list from the IIB project files in ${iib.build.base.directory} ..."
+		/>
+	</target>
+
+
+	<!-- ================================= 
+          target: iib.bar.create             
+         ================================= -->
+
+	<target name="iib.bar.create" description="Creates BAR using mqsicreatebar" depends="iib.build.artefactlist">
+		<property name="exe.createbar" value="${iib.toolkit.home}/mqsicreatebar" />
+
+		<assertproperty property="iib.build.project.directory"/>
+		<assertproperty property="iib.build.target.bar.filename"/>
+		<assertproperty property="iib.build.project"/>
+		<assertproperty property="iib.build.target.artefactlist"/>		
+		
+		
+		<logmsg message="Creating IIB archive(BAR) file ${iib.build.target.bar.filename}"
+		/>
+
+		<logmsg message="${exe.createbar} -cleanbuild -data ${iib.build.project.directory} -b ${iib.build.target.bar.filename} -version ${iib.build.id}.${iib.build.number} -p ${iib.build.project} -o ${iib.build.target.artefactlist}"
+		/>
+		<exec executable="${exe.createbar}"
+		      spawn="false"
+		      failonerror="true"
+		      vmlauncher="false"
+		>
+
+			<arg value="-data" />
+			<arg value="${iib.build.project.directory}" />
+
+			<arg value="-b" />
+			<arg value="${iib.build.target.bar.filename}" />
+
+			<arg value="-cleanbuild" />
+
+			<arg value="-version" />
+			<arg value="${iib.build.id}.${iib.build.number}" />
+
+			<arg value="-p" />
+			<arg line="${iib.build.project}" />
+
+			<arg value="-o" />
+			<arg line="${iib.build.target.artefactlist}" />
+		</exec>
+		<logmsg message="Completed creating IIB archive(BAR) file ${iib.build.target.bar.filename}."
+		/>
+	</target>
+
+
+	<!-- ================================= 
+          target: iib.bar.apply.override             
+         ================================= -->
+	<target name="iib.bar.apply.override"
+	        description="applies overrides to the generated bar file from properties file."
+	>
+		<assertproperty property="iib.toolkit.home"/>
+		<assertproperty property="iib.build.properties.directory"/>
+		<assertproperty property="iib.build.target.environment"/>
+		<assertproperty property="iib.build.target.bar.filename"/>		
+
+		
+		<property name="exe.baroverride" value="${iib.toolkit.home}/mqsiapplybaroverride" />
+		<property name="iib.bar.overridefilename" value="${iib.build.properties.directory}/${iib.build.target.environment}_${iib.build.target.bar.filename}.override"/>
+			
+		<logmsg message="Applying environment specific overrides on IIB archive(BAR) file ${iib.build.target.bar.filename} from property file ${iib.bar.overridefilename}... "
+		/>
+		<logmsg message="${exe.baroverride}-b ${iib.build.target.bar.filename} -p ${iib.bar.overridefilename}"
+		/>
+		<exec executable="${exe.baroverride}"
+		      spawn="false"
+		      failonerror="true"
+		>
+			<arg value="-b" />
+			<arg value="${iib.build.target.bar.filename}" />
+			<arg value="-p" />
+			<arg value="${iib.bar.overridefilename}" />
+		</exec>
+		<logmsg message="Completed applying overrides in IIB archive(BAR) file ${iib.build.target.bar.filename}."
+		/>
+	</target>
+
+
+</project>
