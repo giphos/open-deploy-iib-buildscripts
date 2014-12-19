@@ -1,0 +1,3 @@
+com.ibm.wmb.build.SampleMsgFlow1#additionalInstances=15
+com.ibm.wmb.build.SampleMsgFlow1#Compute.dataSource=DB2_DSN
+com.ibm.wmb.build.SampleMsgFlow1#MQ_Output.queueName=SAMPLE.PROD.OUT
